@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedBot - Medical Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🩺 MedBot - Medical Assistant</h1>
+            <p class="subtitle">Your AI-powered medical information assistant</p>
+            <div class="disclaimer">
+                <strong>⚠️ Important:</strong> This chatbot provides general health information only and is NOT a substitute for professional medical advice. For emergencies, call your local emergency services immediately.
+            </div>
+        </header>
+
+        <div class="chat-container">
+            <div id="chat-messages" class="chat-messages">
+                <div class="message bot-message">
+                    <div class="message-content">
+                        <strong>MedBot:</strong> Hello! I'm here to provide general medical information and answer your health-related questions. Please remember that I'm an AI assistant and not a substitute for professional medical care. How can I help you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-group">
+                    <input type="text" id="user-input" placeholder="Ask a medical question (e.g., symptoms, prevention, general info)...">
+                    <button id="send-btn">Send</button>
+                </div>
+                <div class="example-questions">
+                    <p>Try asking:</p>
+                    <div class="examples">
+                        <span class="example" data-question="What are common flu symptoms?">Flu symptoms</span>
+                        <span class="example" data-question="How to manage stress?">Stress management</span>
+                        <span class="example" data-question="What is healthy blood pressure?">Blood pressure info</span>
+                        <span class="example" data-question="When to see a doctor for fever?">Fever guidance</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by Google Gemini AI | Always consult healthcare professionals for medical advice</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const chatMessages = document.getElementById('chat-messages');
+            const exampleQuestions = document.querySelectorAll('.example');
+
+            // Function to add message to chat
+            function addMessage(content, isUser = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
+                
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                messageContent.innerHTML = isUser ? 
+                    `<strong>You:</strong> ${content}` : 
+                    `<strong>MedBot:</strong> ${content}`;
+                
+                messageDiv.appendChild(messageContent);
+                chatMessages.appendChild(messageDiv);
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Function to show error message
+            function showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'message error-message';
+                errorDiv.innerHTML = `<div class="message-content" style="background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;"><strong>Error:</strong> ${message}</div>`;
+                chatMessages.appendChild(errorDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Function to send message
+            async function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                // Add user message to chat
+                addMessage(message, true);
+                userInput.value = '';
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Sending...';
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        addMessage(data.response);
+                        if (data.disclaimer) {
+                            addMessage(`<em>${data.disclaimer}</em>`);
+                        }
+                    } else {
+                        showError(data.message || 'Sorry, I encountered an error. Please try again.');
+                    }
+                } catch (error) {
+                    showError('Network error. Please check your connection and try again.');
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Send';
+                }
+            }
+
+            // Event listeners
+            sendBtn.addEventListener('click', sendMessage);
+            
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // Example questions
+            exampleQuestions.forEach(example => {
+                example.addEventListener('click', function() {
+                    userInput.value = this.getAttribute('data-question');
+                    userInput.focus();
+                });
+            });
+
+            // Focus on input field
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
